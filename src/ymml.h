@@ -1,0 +1,67 @@
+#pragma once
+
+#include <cstddef>
+#include <cstdint>
+#ifdef YMML_SHARED
+#define YMML_API __attribute__((visibility("default"))) extern
+#else
+#define YMML_API extern
+#endif
+
+#define YMML_MAX_DIMENSIONS 4
+#define YMML_MAX_SRC 10
+
+typedef uint16_t ymml_fp16_t;
+
+enum class ymml_type { YMML_F32 = 0, YMML_F16 = 1 };
+
+enum class ymml_op { YMML_OP_ADD };
+
+struct ymml_meta_data_param {
+  size_t mem_size;
+  void *buffer;
+};
+
+struct ymml_data_param {
+  size_t mem_size;
+  void *buffer;
+};
+
+struct ymml_meta_data_arena {
+  size_t mem_size;
+  void *mem_buffer;
+};
+
+struct ymml_data_arena {
+  size_t mem_size;
+  void *mem_buffer;
+};
+
+struct ymml_tensor {
+  enum ymml_type type;
+  uint64_t ne[YMML_MAX_DIMENSIONS];
+  uint32_t nb[YMML_MAX_DIMENSIONS];
+
+  // Operation for this tensor.
+  enum ymml_op op;
+
+  // Parent tensors.
+  struct ymml_Tensor *src[YMML_MAX_SRC];
+
+  // Stores the tensor data.
+  void *data;
+};
+
+static const size_t YMML_TENSOR_SIZE = sizeof(struct ymml_tensor);
+
+YMML_API ymml_meta_data_arena *
+ymml_init_meta_arena(ymml_meta_data_param &param);
+
+YMML_API ymml_data_arena *ymml_init_data_arena(ymml_data_param &param);
+
+struct ymml_tensor *ymml_new_tensor(ymml_meta_data_arena *meta_arena,
+                                    ymml_data_arena *data_arena,
+                                    enum ymml_type type, int dims,
+                                    uint64_t *ne);
+
+
