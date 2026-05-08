@@ -81,7 +81,18 @@ static struct ymml_tensor *ymml_new_tensor_impl(ymml_meta_data_arena *meta_arena
                                     ymml_data_arena *data_arena,
                                     enum ymml_type type, int dims,
                                     uint64_t *ne){
+  // For this tensor allocate struct on meta data arena and buffer in data arena.
+  assert(dims >= 1 &&  dims <= YMML_MAX_DIMENSIONS);
+
+  // start calculating total bytes needed to store in buffer.
+  uint64_t total_elements = ne[0];
+  for(int i = 1; i < dims; i++){
+    total_elements += ne[i];
+  }
   
+
+  uint64_t total_bytes = 
+
 }
 
 struct ymml_tensor *ymml_new_tensor(ymml_meta_data_arena *meta_arena,
