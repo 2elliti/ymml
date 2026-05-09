@@ -27,7 +27,10 @@ struct ymml_object {
   size_t offset;
   size_t size;
   struct ymml_object *next;
-  enum ymml_object_type type;
+  union {
+    enum ymml_object_type meta_type;
+    enum ymml_type data_type;
+  } unified_type;
 };
 
 static const size_t YMML_OBJECT_SIZE = sizeof(struct ymml_object);
@@ -89,6 +92,13 @@ ymml_init_meta_arena(ymml_meta_data_param &param);
 
 YMML_API ymml_data_arena *ymml_init_data_arena(ymml_data_param &param);
 
-struct ymml_tensor *ymml_new_tensor(ymml_meta_data_arena *meta_arena,
-                                    enum ymml_type type, int dims,
-                                    uint64_t *ne);
+YMML_API struct ymml_tensor *ymml_new_tensor(ymml_meta_data_arena *meta_arena,
+                                             enum ymml_type type, int dims,
+                                             uint64_t *ne);
+
+YMML_API void ymml_fill_tensor_data(struct ymml_data_arena *data_arena,
+                                    struct ymml_tensor *tensor, void *data,
+                                    size_t size);
+
+YMML_API struct ymml_object *ymml_get_tensor_data(struct ymml_tensor *tensor);
+

@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
+#include <cstring>
 
 #define YMML_MEM_ALIGN 16
 #define YMML_PLACEHOLDER_SIZE 16
@@ -87,9 +88,9 @@ ymml_data_arena *ymml_init_data_arena(ymml_data_param &param) {
   return ctx;
 }
 
-static struct ymml_object *ymml_new_object(struct ymml_meta_data_arena *marena,
-                                           enum ymml_object_type type,
-                                           size_t size) {
+static struct ymml_object *
+ymml_new_meta_object(struct ymml_meta_data_arena *marena,
+                     enum ymml_object_type type, size_t size) {
   struct ymml_object *object = marena->end;
   size_t last_obj_offset = object ? object->offset : 0;
   size_t last_obj_size = object ? object->size : 0;
@@ -98,7 +99,7 @@ static struct ymml_object *ymml_new_object(struct ymml_meta_data_arena *marena,
       (struct ymml_object *)((uintptr_t)marena->mem_buffer + end);
   n_obj->offset = end + YMML_OBJECT_SIZE;
   n_obj->size = size;
-  n_obj->type = type;
+  n_obj->unified_type.meta_type = type;
   n_obj->next = NULL;
   if (marena->end) {
     marena->end->next = n_obj;
@@ -128,7 +129,7 @@ ymml_new_tensor_impl(ymml_meta_data_arena *meta_arena, enum ymml_type type,
 
   // We need a new way of thinking. WHat if i make or carve space out of the
   // buffer?
-  struct ymml_object *tensor_object = ymml_new_object(
+  struct ymml_object *tensor_object = ymml_new_meta_object(
       meta_arena, ymml_object_type::YMML_OBJ_TYP_TENSOR, YMML_TENSOR_SIZE);
 
   // Try getting tensor pointer.
@@ -136,6 +137,9 @@ ymml_new_tensor_impl(ymml_meta_data_arena *meta_arena, enum ymml_type type,
   struct ymml_tensor *n_tensor =
       (struct ymml_tensor *)((uintptr_t)meta_arena->mem_buffer +
                              tensor_object->offset);
+  for (uint32_t i = 0; i < dims; i++) {
+    n_tensor->ne[i] = ne[i];
+  }
   return n_tensor;
 }
 
@@ -144,4 +148,53 @@ struct ymml_tensor *ymml_new_tensor(ymml_meta_data_arena *meta_arena,
                                     uint64_t *ne) {
 
   return ymml_new_tensor_impl(meta_arena, type, dims, ne);
+}
+
+static struct ymml_object *
+ymml_new_data_object(struct ymml_data_arena *data_arena, enum ymml_type type,
+                     void *data, size_t size) {
+  struct ymml_object *object = data_arena->end;
+  size_t last_obj_size = object ? object->size : 0;
+  size_t last_obj_offset = object ? object->offset : 0;
+  size_t end = last_obj_offset + last_obj_size;
+
+  struct ymml_object *n_obj =
+      (struct ymml_object *)((uintptr_t)data_arena->mem_buffer + end);
+  n_obj->offset = end + YMML_OBJECT_SIZE;
+  n_obj->size = size;
+  n_obj->unified_type.data_type = type;
+  char *base_ptr = (char *)data_arena->mem_buffer + n_obj->offset;
+
+  memcpy(base_ptr, data, size);
+
+  if (data_arena->end) {
+    data_arena->end->next = n_obj;
+  } else {
+    data_arena->begin = n_obj;
+  }
+
+  data_arena->end = n_obj;
+  return n_obj;
+}
+
+void ymml_fill_tensor_data(struct ymml_data_arena *data_arena,
+                           struct ymml_tensor *tensor, void *data,
+                           size_t size) {
+  /*
+    What is the aim for this function?
+    What exactly do i have to do now?
+    You have a data pointer.
+    You have a total size.
+  */
+
+  // calculate the size of this shit.
+  size_t total_bytes_req =
+      type_info[static_cast<int>(tensor->type)].type_size * size;
+  struct ymml_object *obj =
+      ymml_new_data_object(data_arena, tensor->type, data, total_bytes_req);
+  tensor->data_object = obj;
+}
+
+struct ymml_object *ymml_get_tensor_data(struct ymml_tensor *tensor) {
+  return tensor->data_object;
 }
