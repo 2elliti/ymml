@@ -5,8 +5,18 @@
 #include <cstdlib>
 
 #define YMML_MEM_ALIGN 16
-
+#define YMML_PLACEHOLDER_SIZE 16
+#define YMML_BUFFER_MAX_SIZE
 #define YMML_PAD(x, n) (((x) + (n) - 1) & ~((n) - 1))
+
+struct ymml_type_info_t {
+  enum ymml_type type;
+  size_t type_size;
+};
+
+static struct ymml_type_info_t type_info[static_cast<int>(
+    ymml_type::YMML_END)] = {{ymml_type::YMML_F32, sizeof(float)},
+                             {ymml_type::YMML_F16, sizeof(uint16_t)}};
 
 static void *aligned_malloc(size_t mem_size, size_t alignment) {
   // lets make an extra space that we have to allocate.
@@ -77,28 +87,61 @@ ymml_data_arena *ymml_init_data_arena(ymml_data_param &param) {
   return ctx;
 }
 
-static struct ymml_tensor *ymml_new_tensor_impl(ymml_meta_data_arena *meta_arena,
-                                    ymml_data_arena *data_arena,
-                                    enum ymml_type type, int dims,
-                                    uint64_t *ne){
-  // For this tensor allocate struct on meta data arena and buffer in data arena.
-  assert(dims >= 1 &&  dims <= YMML_MAX_DIMENSIONS);
+static struct ymml_object *ymml_new_object(struct ymml_meta_data_arena *marena,
+                                           enum ymml_object_type type,
+                                           size_t size) {
+  struct ymml_object *object = marena->end;
+  size_t last_obj_offset = object ? object->offset : 0;
+  size_t last_obj_size = object ? object->size : 0;
+  size_t end = last_obj_size + last_obj_offset;
+  ymml_object *n_obj =
+      (struct ymml_object *)((uintptr_t)marena->mem_buffer + end);
+  n_obj->offset = end + YMML_OBJECT_SIZE;
+  n_obj->size = size;
+  n_obj->type = type;
+  n_obj->next = NULL;
+  if (marena->end) {
+    marena->end->next = n_obj;
+  } else {
+    marena->begin = n_obj;
+  }
+  marena->end = n_obj;
+  return n_obj;
+}
+
+static struct ymml_tensor *
+ymml_new_tensor_impl(ymml_meta_data_arena *meta_arena, enum ymml_type type,
+                     int dims, uint64_t *ne) {
+  // For this tensor allocate struct on meta data arena and buffer in data
+  // arena.
+  assert(dims >= 1 && dims <= YMML_MAX_DIMENSIONS);
 
   // start calculating total bytes needed to store in buffer.
   uint64_t total_elements = ne[0];
-  for(int i = 1; i < dims; i++){
+  for (int i = 1; i < dims; i++) {
     total_elements += ne[i];
   }
-  
 
-  uint64_t total_bytes = 
+  // Calculate number of bytes required for storing buffer data.
+  uint64_t total_bytes =
+      type_info[static_cast<uint64_t>(type)].type_size * total_elements;
 
+  // We need a new way of thinking. WHat if i make or carve space out of the
+  // buffer?
+  struct ymml_object *tensor_object = ymml_new_object(
+      meta_arena, ymml_object_type::YMML_OBJ_TYP_TENSOR, YMML_TENSOR_SIZE);
+
+  // Try getting tensor pointer.
+
+  struct ymml_tensor *n_tensor =
+      (struct ymml_tensor *)((uintptr_t)meta_arena->mem_buffer +
+                             tensor_object->offset);
+  return n_tensor;
 }
 
 struct ymml_tensor *ymml_new_tensor(ymml_meta_data_arena *meta_arena,
-                                    ymml_data_arena *data_arena,
                                     enum ymml_type type, int dims,
                                     uint64_t *ne) {
 
-  return ymml_new_tensor_impl(meta_arena,data_arena,type,dims,ne);
+  return ymml_new_tensor_impl(meta_arena, type, dims, ne);
 }

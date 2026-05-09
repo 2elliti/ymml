@@ -10,19 +10,24 @@
 
 #define YMML_MAX_DIMENSIONS 4
 #define YMML_MAX_SRC 10
+#define YMML_MAX_NAME 32
 
 typedef uint16_t ymml_fp16_t;
 
-enum class ymml_type { YMML_F32 = 0, YMML_F16 = 1 };
+enum class ymml_type { YMML_F32 = 0, YMML_F16 = 1, YMML_END = 2 };
 enum class ymml_op { YMML_OP_ADD };
-enum class ymml_object_type { YMML_OBJ_TYP_TENSOR, YMML_OBJ_TYP_GRAPH };
+enum class ymml_object_type {
+  YMML_OBJ_TYP_TENSOR,
+  YMML_OBJ_TYP_GRAPH,
+  YMML_OBJ_TYP_OBJECT
+};
 
 // Stores offset, size and type of object in arena buffer.
 struct ymml_object {
   size_t offset;
   size_t size;
   struct ymml_object *next;
-  enum class ymml_object_type type;
+  enum ymml_object_type type;
 };
 
 static const size_t YMML_OBJECT_SIZE = sizeof(struct ymml_object);
@@ -42,7 +47,7 @@ struct ymml_meta_data_arena {
   void *mem_buffer;
   int total_objects;
 
-  //Keeps track of start and end of linked list
+  // Keeps track of start and end of linked list
   struct ymml_object *begin;
   struct ymml_object *end;
 };
@@ -52,13 +57,14 @@ struct ymml_data_arena {
   void *mem_buffer;
   int total_objects;
 
-  //Keeps track of start and end of linked list
+  // Keeps track of start and end of linked list
   struct ymml_object *begin;
   struct ymml_object *end;
 };
 
 struct ymml_tensor {
   enum ymml_type type;
+  char name[YMML_MAX_NAME];
   uint64_t ne[YMML_MAX_DIMENSIONS];
   uint32_t nb[YMML_MAX_DIMENSIONS];
 
@@ -70,6 +76,10 @@ struct ymml_tensor {
 
   // Stores the tensor data.
   void *data;
+
+  // Question do we really need tensor data?
+  // Or do we need a mechanism for storing info in other arena?
+  struct ymml_object *data_object;
 };
 
 static const size_t YMML_TENSOR_SIZE = sizeof(struct ymml_tensor);
@@ -80,6 +90,5 @@ ymml_init_meta_arena(ymml_meta_data_param &param);
 YMML_API ymml_data_arena *ymml_init_data_arena(ymml_data_param &param);
 
 struct ymml_tensor *ymml_new_tensor(ymml_meta_data_arena *meta_arena,
-                                    ymml_data_arena *data_arena,
                                     enum ymml_type type, int dims,
                                     uint64_t *ne);
