@@ -48,7 +48,7 @@ struct ymml_data_param {
 struct ymml_meta_data_arena {
   size_t mem_size;
   void *mem_buffer;
-  int total_objects;
+  int total_objects = 0;
 
   // Keeps track of start and end of linked list
   struct ymml_object *begin;
@@ -58,7 +58,7 @@ struct ymml_meta_data_arena {
 struct ymml_data_arena {
   size_t mem_size;
   void *mem_buffer;
-  int total_objects;
+  int total_objects = 0;
 
   // Keeps track of start and end of linked list
   struct ymml_object *begin;
@@ -75,7 +75,7 @@ struct ymml_tensor {
   enum ymml_op op;
 
   // Parent tensors.
-  struct ymml_Tensor *src[YMML_MAX_SRC];
+  struct ymml_tensor *src[YMML_MAX_SRC];
 
   // Stores the tensor data.
   void *data;
@@ -102,3 +102,6 @@ YMML_API void ymml_fill_tensor_data(struct ymml_data_arena *data_arena,
 
 YMML_API struct ymml_object *ymml_get_tensor_data(struct ymml_tensor *tensor);
 
+struct ymml_tensor *ymml_add(struct ymml_meta_data_arena *mdata,
+                             struct ymml_data_arena *data,
+                             struct ymml_Tensor *a, struct ymml_Tensor *b);

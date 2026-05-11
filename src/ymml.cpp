@@ -7,7 +7,6 @@
 
 #define YMML_MEM_ALIGN 16
 #define YMML_PLACEHOLDER_SIZE 16
-#define YMML_BUFFER_MAX_SIZE
 #define YMML_PAD(x, n) (((x) + (n) - 1) & ~((n) - 1))
 
 struct ymml_type_info_t {
@@ -62,7 +61,7 @@ ymml_meta_data_arena *ymml_init_meta_arena(ymml_meta_data_param &param) {
   ctx->mem_size = mem_size;
   ctx->mem_buffer = param.buffer
                         ? param.buffer
-                        : aligned_malloc(param.mem_size, YMML_MEM_ALIGN);
+                        : aligned_malloc(mem_size, YMML_MEM_ALIGN);
   assert(ctx->mem_buffer != nullptr);
   return ctx;
 }
@@ -97,6 +96,7 @@ ymml_new_meta_object(struct ymml_meta_data_arena *marena,
   size_t end = last_obj_size + last_obj_offset;
   ymml_object *n_obj =
       (struct ymml_object *)((uintptr_t)marena->mem_buffer + end);
+  marena->total_objects++;
   n_obj->offset = end + YMML_OBJECT_SIZE;
   n_obj->size = size;
   n_obj->unified_type.meta_type = type;
@@ -120,7 +120,7 @@ ymml_new_tensor_impl(ymml_meta_data_arena *meta_arena, enum ymml_type type,
   // start calculating total bytes needed to store in buffer.
   uint64_t total_elements = ne[0];
   for (int i = 1; i < dims; i++) {
-    total_elements += ne[i];
+    total_elements *= ne[i];
   }
 
   // Calculate number of bytes required for storing buffer data.
@@ -160,6 +160,7 @@ ymml_new_data_object(struct ymml_data_arena *data_arena, enum ymml_type type,
 
   struct ymml_object *n_obj =
       (struct ymml_object *)((uintptr_t)data_arena->mem_buffer + end);
+  data_arena->total_objects++;
   n_obj->offset = end + YMML_OBJECT_SIZE;
   n_obj->size = size;
   n_obj->unified_type.data_type = type;
@@ -193,6 +194,7 @@ void ymml_fill_tensor_data(struct ymml_data_arena *data_arena,
   struct ymml_object *obj =
       ymml_new_data_object(data_arena, tensor->type, data, total_bytes_req);
   tensor->data_object = obj;
+  tensor->data = (void *)(((char *)data_arena->mem_buffer + obj->offset));
 }
 
 struct ymml_object *ymml_get_tensor_data(struct ymml_tensor *tensor) {
