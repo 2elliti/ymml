@@ -83,6 +83,8 @@ struct ymml_tensor {
   // Question do we really need tensor data?
   // Or do we need a mechanism for storing info in other arena?
   struct ymml_object *data_object;
+
+  uint8_t dims;
 };
 
 static const size_t YMML_TENSOR_SIZE = sizeof(struct ymml_tensor);
@@ -104,4 +106,23 @@ YMML_API struct ymml_object *ymml_get_tensor_data(struct ymml_tensor *tensor);
 
 struct ymml_tensor *ymml_add(struct ymml_meta_data_arena *mdata,
                              struct ymml_data_arena *data,
-                             struct ymml_Tensor *a, struct ymml_Tensor *b);
+                             struct ymml_tensor *a, struct ymml_tensor *b,
+                             bool inplace);
+
+/*
+  Why ymml-graph?
+  we  need  to convert  our tensor  and its resources into DAG (Directed acyclic
+  graph) to execute  it.
+
+  How are we going to do ?
+
+  We  first decide what are the members that we need.
+
+  - number  of nodes.
+  - pointers to all the tensors.
+*/
+
+struct ymml_graph {
+  // We need to  topo sort  all the tensors.
+  // need a hash table for storing info wether we visited a node or not?
+};

@@ -59,9 +59,8 @@ ymml_meta_data_arena *ymml_init_meta_arena(ymml_meta_data_param &param) {
   ymml_meta_data_arena *ctx =
       (ymml_meta_data_arena *)malloc(sizeof(ymml_meta_data_arena));
   ctx->mem_size = mem_size;
-  ctx->mem_buffer = param.buffer
-                        ? param.buffer
-                        : aligned_malloc(mem_size, YMML_MEM_ALIGN);
+  ctx->mem_buffer =
+      param.buffer ? param.buffer : aligned_malloc(mem_size, YMML_MEM_ALIGN);
   assert(ctx->mem_buffer != nullptr);
   return ctx;
 }
@@ -140,6 +139,7 @@ ymml_new_tensor_impl(ymml_meta_data_arena *meta_arena, enum ymml_type type,
   for (uint32_t i = 0; i < dims; i++) {
     n_tensor->ne[i] = ne[i];
   }
+  n_tensor->dims = dims;
   return n_tensor;
 }
 
@@ -199,4 +199,28 @@ void ymml_fill_tensor_data(struct ymml_data_arena *data_arena,
 
 struct ymml_object *ymml_get_tensor_data(struct ymml_tensor *tensor) {
   return tensor->data_object;
+}
+
+
+// returns a duplicate tensor.
+static struct ymml_tensor *
+ymml_tensor_duplicate(struct ymml_meta_data_arena *marena,
+                      struct ymml_tensor *tensor) {
+  return ymml_new_tensor(marena, tensor->type, tensor->dims, tensor->ne);
+}
+
+struct ymml_tensor *ymml_add(struct ymml_meta_data_arena *marena,
+                             struct ymml_data_arena *data,
+                             struct ymml_tensor *a, struct ymml_tensor *b,
+                             bool inplace) {
+
+  // we need to do some testing
+  // need meta arena, whats the type? check the dims and ne.
+  // We will give 2 options here, whether a user wants to go for inplace or not?
+  
+  struct ymml_tensor *ntensor = ymml_tensor_duplicate(marena, a);
+  ntensor->op = ymml_op::YMML_OP_ADD;
+  ntensor->src[0] = a;
+  ntensor->src[1] = b;
+  return ntensor;
 }
