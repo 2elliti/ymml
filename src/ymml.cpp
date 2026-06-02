@@ -61,6 +61,9 @@ ymml_meta_data_arena *ymml_init_meta_arena(ymml_meta_data_param &param) {
   ctx->mem_size = mem_size;
   ctx->mem_buffer =
       param.buffer ? param.buffer : aligned_malloc(mem_size, YMML_MEM_ALIGN);
+  ctx->begin = nullptr;
+  ctx->end = nullptr;
+  ctx->total_objects = 0;
   assert(ctx->mem_buffer != nullptr);
   return ctx;
 }
@@ -82,7 +85,10 @@ ymml_data_arena *ymml_init_data_arena(ymml_data_param &param) {
   ctx->mem_size = mem_size;
   ctx->mem_buffer = param.buffer
                         ? param.buffer
-                        : aligned_malloc(param.mem_size, YMML_MEM_ALIGN);
+                        : aligned_malloc(mem_size, YMML_MEM_ALIGN);
+  ctx->begin = nullptr;
+  ctx->end = nullptr;
+  ctx->total_objects = 0;
   return ctx;
 }
 
@@ -139,7 +145,18 @@ ymml_new_tensor_impl(ymml_meta_data_arena *meta_arena, enum ymml_type type,
   for (uint32_t i = 0; i < dims; i++) {
     n_tensor->ne[i] = ne[i];
   }
+
+  // Initialize unused dimensions as 1.
+  for(uint32_t i = dims; i < YMML_MAX_DIMENSIONS; i++)n_tensor->ne[i] = 1;
+  
+  // Initialize all strides as 0.
+  for(uint32_t i = 0; i < YMML_MAX_DIMENSIONS; i++)n_tensor->nb[i] = 0;
+
+  // Initialize all src ptx as null.
+  for(uint32_t i = 0; i < YMML_MAX_SRC; i++)n_tensor->src[i] = nullptr;
   n_tensor->dims = dims;
+  n_tensor->type = ymml_type::YMML_NONE;
+  
   return n_tensor;
 }
 
@@ -224,3 +241,19 @@ struct ymml_tensor *ymml_add(struct ymml_meta_data_arena *marena,
   ntensor->src[1] = b;
   return ntensor;
 }
+
+static ymml_graph *ymml_new_graph_impl(struct ymml_meta_data_arena *marena){
+  // Get the object (This keeps record of meta data).
+  struct ymml_object *obj = ymml_new_meta_object(marena, ymml_object_type::YMML_OBJ_TYP_GRAPH, YMML_GRAPH_SIZE);
+  // Build struct for graph and return.
+  return (struct ymml_graph *)((uintptr_t)marena->mem_buffer + obj->offset);
+}
+
+struct ymml_graph * ymml_new_graph(struct ymml_meta_data_arena *marena){
+  return ymml_new_graph_impl(marena);
+}
+
+void ymml_build_forward_graph(struct ymml_graph *graph, struct ymml_tensor *tensor){
+
+}
+

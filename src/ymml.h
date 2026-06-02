@@ -14,7 +14,7 @@
 
 typedef uint16_t ymml_fp16_t;
 
-enum class ymml_type { YMML_F32 = 0, YMML_F16 = 1, YMML_END = 2 };
+enum class ymml_type { YMML_NONE = 0, YMML_F16 = 1, YMML_F32 = 2, YMML_END = 3 };
 enum class ymml_op { YMML_OP_ADD };
 enum class ymml_object_type {
   YMML_OBJ_TYP_TENSOR,
@@ -119,10 +119,21 @@ struct ymml_tensor *ymml_add(struct ymml_meta_data_arena *mdata,
   We  first decide what are the members that we need.
 
   - number  of nodes.
-  - pointers to all the tensors.
+  - pointers to all the tensors.aa
 */
 
+
+/*
+How we tackling this?
+
+*/
 struct ymml_graph {
   // We need to  topo sort  all the tensors.
   // need a hash table for storing info wether we visited a node or not?
+  size_t total_nodes;
+  struct ymml_tensor *start_node;
+  struct ymml_tensor **sorted_nodes;
+  // Do i add a hash table in here?
 };
+
+static const size_t YMML_GRAPH_SIZE = sizeof(struct ymml_graph);
