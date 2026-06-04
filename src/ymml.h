@@ -22,7 +22,7 @@ enum class ymml_type {
   YMML_END = 3,
   YMML_INT64 = 4
 };
-enum class ymml_op { YMML_OP_ADD };
+enum class ymml_op { YMML_OP_ADD, YMML_OP_NONE };
 enum class ymml_object_type {
   YMML_OBJ_TYP_TENSOR,
   YMML_OBJ_TYP_GRAPH,

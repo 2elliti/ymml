@@ -159,6 +159,9 @@ ymml_new_tensor_impl(ymml_meta_data_arena *meta_arena, enum ymml_type type,
   n_tensor->dims = dims;
   n_tensor->type = ymml_type::YMML_NONE;
   n_tensor->visited = false;
+
+  // Keep operations null here.
+  n_tensor->op = ymml_op::YMML_OP_NONE;
   return n_tensor;
 }
 
