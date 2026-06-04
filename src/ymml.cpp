@@ -4,8 +4,10 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <stdexcept>
 
 #define YMML_MEM_ALIGN 16
+#define YMML_MAX_GRAPH_TENSOR 1024
 #define YMML_PLACEHOLDER_SIZE 16
 #define YMML_PAD(x, n) (((x) + (n) - 1) & ~((n) - 1))
 
@@ -156,7 +158,7 @@ ymml_new_tensor_impl(ymml_meta_data_arena *meta_arena, enum ymml_type type,
   for(uint32_t i = 0; i < YMML_MAX_SRC; i++)n_tensor->src[i] = nullptr;
   n_tensor->dims = dims;
   n_tensor->type = ymml_type::YMML_NONE;
-  
+  n_tensor->visited = false;
   return n_tensor;
 }
 
@@ -183,7 +185,8 @@ ymml_new_data_object(struct ymml_data_arena *data_arena, enum ymml_type type,
   n_obj->unified_type.data_type = type;
   char *base_ptr = (char *)data_arena->mem_buffer + n_obj->offset;
 
-  memcpy(base_ptr, data, size);
+  // This here is worst thing, we ever did. Get this shit done.
+  if(data != nullptr)memcpy(base_ptr, data, size);
 
   if (data_arena->end) {
     data_arena->end->next = n_obj;
@@ -249,11 +252,37 @@ static ymml_graph *ymml_new_graph_impl(struct ymml_meta_data_arena *marena){
   return (struct ymml_graph *)((uintptr_t)marena->mem_buffer + obj->offset);
 }
 
-struct ymml_graph * ymml_new_graph(struct ymml_meta_data_arena *marena){
-  return ymml_new_graph_impl(marena);
+struct ymml_graph * ymml_new_graph(struct ymml_meta_data_arena *marena, struct ymml_data_arena *darena){
+  // Get the bare structure of graph.
+  struct ymml_graph *ngraph = ymml_new_graph_impl(marena);
+
+  // allocates space for sorted nodes.
+  struct ymml_object *object = ymml_new_data_object(darena, ymml_type::YMML_INT64, nullptr, YMML_MAX_GRAPH_TENSOR);
+
+  // Assign the allocated space to ngraph.
+  ngraph->sorted_nodes = (struct ymml_tensor **)((uintptr_t)darena->mem_buffer + object->offset);
+  
+  // Keep start-node as nullptr.
+  ngraph->start_node = nullptr;
+
+  // Keep total nodes as 0
+  ngraph->total_nodes = 0;
+
+  return ngraph;
+}
+
+static void ymml_visit_parent_nodes(struct ymml_graph *graph, struct ymml_tensor *tensor){
+  if(tensor == nullptr)return;
+
+  for(uint8_t i = 0; i < YMML_MAX_SRC;i++){
+    ymml_visit_parent_nodes(graph, tensor->src[i]);
+  }
+  graph->sorted_nodes[graph->total_nodes] = tensor;
+  graph->total_nodes++;
 }
 
 void ymml_build_forward_graph(struct ymml_graph *graph, struct ymml_tensor *tensor){
-
+  if(tensor == nullptr)return;
+  ymml_visit_parent_nodes(graph, tensor);
 }
 

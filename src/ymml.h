@@ -11,10 +11,17 @@
 #define YMML_MAX_DIMENSIONS 4
 #define YMML_MAX_SRC 10
 #define YMML_MAX_NAME 32
+#define YMML_MAX_GRAPH_NODE 1024
 
 typedef uint16_t ymml_fp16_t;
 
-enum class ymml_type { YMML_NONE = 0, YMML_F16 = 1, YMML_F32 = 2, YMML_END = 3 };
+enum class ymml_type {
+  YMML_NONE = 0,
+  YMML_F16 = 1,
+  YMML_F32 = 2,
+  YMML_END = 3,
+  YMML_INT64 = 4
+};
 enum class ymml_op { YMML_OP_ADD };
 enum class ymml_object_type {
   YMML_OBJ_TYP_TENSOR,
@@ -85,6 +92,8 @@ struct ymml_tensor {
   struct ymml_object *data_object;
 
   uint8_t dims;
+
+  bool visited;
 };
 
 static const size_t YMML_TENSOR_SIZE = sizeof(struct ymml_tensor);
@@ -122,7 +131,6 @@ struct ymml_tensor *ymml_add(struct ymml_meta_data_arena *mdata,
   - pointers to all the tensors.aa
 */
 
-
 /*
 How we tackling this?
 
@@ -137,3 +145,5 @@ struct ymml_graph {
 };
 
 static const size_t YMML_GRAPH_SIZE = sizeof(struct ymml_graph);
+void ymml_build_forward_graph(struct ymml_graph *graph, struct ymml_tensor *tensor);
+struct ymml_graph * ymml_new_graph(struct ymml_meta_data_arena *marena, struct ymml_data_arena *darena);
