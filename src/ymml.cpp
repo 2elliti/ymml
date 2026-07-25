@@ -16,9 +16,21 @@ struct ymml_type_info_t {
   size_t type_size;
 };
 
+/*
+enum class ymml_type {
+  YMML_NONE = 0,
+  YMML_F16 = 1,
+  YMML_F32 = 2,
+  YMML_INT64 = 3,
+  YMML_END = 4
+};
+*/
+
 static struct ymml_type_info_t type_info[static_cast<int>(
-    ymml_type::YMML_END)] = {{ymml_type::YMML_F32, sizeof(float)},
-                             {ymml_type::YMML_F16, sizeof(uint16_t)}};
+    ymml_type::YMML_END)] = {{ymml_type::YMML_NONE, 0},
+                             {ymml_type::YMML_F16, sizeof(uint16_t)},
+                             {ymml_type::YMML_F32, sizeof(float)},
+                             {ymml_type::YMML_INT64, sizeof(uint64_t)}};
 
 static void *aligned_malloc(size_t mem_size, size_t alignment) {
   // lets make an extra space that we have to allocate.
@@ -157,7 +169,7 @@ ymml_new_tensor_impl(ymml_meta_data_arena *meta_arena, enum ymml_type type,
   // Initialize all src ptx as null.
   for(uint32_t i = 0; i < YMML_MAX_SRC; i++)n_tensor->src[i] = nullptr;
   n_tensor->dims = dims;
-  n_tensor->type = ymml_type::YMML_NONE;
+  n_tensor->type = type;
   n_tensor->visited = false;
 
   // Keep operations null here.

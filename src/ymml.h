@@ -19,8 +19,8 @@ enum class ymml_type {
   YMML_NONE = 0,
   YMML_F16 = 1,
   YMML_F32 = 2,
-  YMML_END = 3,
-  YMML_INT64 = 4
+  YMML_INT64 = 3,
+  YMML_END = 4
 };
 enum class ymml_op { YMML_OP_ADD, YMML_OP_NONE };
 enum class ymml_object_type {
