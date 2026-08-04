@@ -97,9 +97,8 @@ ymml_data_arena *ymml_init_data_arena(ymml_data_param &param) {
 
   ymml_data_arena *ctx = (ymml_data_arena *)malloc(sizeof(ymml_data_arena));
   ctx->mem_size = mem_size;
-  ctx->mem_buffer = param.buffer
-                        ? param.buffer
-                        : aligned_malloc(mem_size, YMML_MEM_ALIGN);
+  ctx->mem_buffer =
+      param.buffer ? param.buffer : aligned_malloc(mem_size, YMML_MEM_ALIGN);
   ctx->begin = nullptr;
   ctx->end = nullptr;
   ctx->total_objects = 0;
@@ -161,13 +160,16 @@ ymml_new_tensor_impl(ymml_meta_data_arena *meta_arena, enum ymml_type type,
   }
 
   // Initialize unused dimensions as 1.
-  for(uint32_t i = dims; i < YMML_MAX_DIMENSIONS; i++)n_tensor->ne[i] = 1;
-  
+  for (uint32_t i = dims; i < YMML_MAX_DIMENSIONS; i++)
+    n_tensor->ne[i] = 1;
+
   // Initialize all strides as 0.
-  for(uint32_t i = 0; i < YMML_MAX_DIMENSIONS; i++)n_tensor->nb[i] = 0;
+  for (uint32_t i = 0; i < YMML_MAX_DIMENSIONS; i++)
+    n_tensor->nb[i] = 0;
 
   // Initialize all src ptx as null.
-  for(uint32_t i = 0; i < YMML_MAX_SRC; i++)n_tensor->src[i] = nullptr;
+  for (uint32_t i = 0; i < YMML_MAX_SRC; i++)
+    n_tensor->src[i] = nullptr;
   n_tensor->dims = dims;
   n_tensor->type = type;
   n_tensor->visited = false;
@@ -201,7 +203,8 @@ ymml_new_data_object(struct ymml_data_arena *data_arena, enum ymml_type type,
   char *base_ptr = (char *)data_arena->mem_buffer + n_obj->offset;
 
   // This here is worst thing, we ever did. Get this shit done.
-  if(data != nullptr)memcpy(base_ptr, data, size);
+  if (data != nullptr)
+    memcpy(base_ptr, data, size);
 
   if (data_arena->end) {
     data_arena->end->next = n_obj;
@@ -236,7 +239,6 @@ struct ymml_object *ymml_get_tensor_data(struct ymml_tensor *tensor) {
   return tensor->data_object;
 }
 
-
 // returns a duplicate tensor.
 static struct ymml_tensor *
 ymml_tensor_duplicate(struct ymml_meta_data_arena *marena,
@@ -252,7 +254,7 @@ struct ymml_tensor *ymml_add(struct ymml_meta_data_arena *marena,
   // we need to do some testing
   // need meta arena, whats the type? check the dims and ne.
   // We will give 2 options here, whether a user wants to go for inplace or not?
-  
+
   struct ymml_tensor *ntensor = ymml_tensor_duplicate(marena, a);
   ntensor->op = ymml_op::YMML_OP_ADD;
   ntensor->src[0] = a;
@@ -260,23 +262,27 @@ struct ymml_tensor *ymml_add(struct ymml_meta_data_arena *marena,
   return ntensor;
 }
 
-static ymml_graph *ymml_new_graph_impl(struct ymml_meta_data_arena *marena){
+static ymml_graph *ymml_new_graph_impl(struct ymml_meta_data_arena *marena) {
   // Get the object (This keeps record of meta data).
-  struct ymml_object *obj = ymml_new_meta_object(marena, ymml_object_type::YMML_OBJ_TYP_GRAPH, YMML_GRAPH_SIZE);
+  struct ymml_object *obj = ymml_new_meta_object(
+      marena, ymml_object_type::YMML_OBJ_TYP_GRAPH, YMML_GRAPH_SIZE);
   // Build struct for graph and return.
   return (struct ymml_graph *)((uintptr_t)marena->mem_buffer + obj->offset);
 }
 
-struct ymml_graph * ymml_new_graph(struct ymml_meta_data_arena *marena, struct ymml_data_arena *darena){
+struct ymml_graph *ymml_new_graph(struct ymml_meta_data_arena *marena,
+                                  struct ymml_data_arena *darena) {
   // Get the bare structure of graph.
   struct ymml_graph *ngraph = ymml_new_graph_impl(marena);
 
   // allocates space for sorted nodes.
-  struct ymml_object *object = ymml_new_data_object(darena, ymml_type::YMML_INT64, nullptr, YMML_MAX_GRAPH_TENSOR);
+  struct ymml_object *object = ymml_new_data_object(
+      darena, ymml_type::YMML_INT64, nullptr, YMML_MAX_GRAPH_TENSOR);
 
   // Assign the allocated space to ngraph.
-  ngraph->sorted_nodes = (struct ymml_tensor **)((uintptr_t)darena->mem_buffer + object->offset);
-  
+  ngraph->sorted_nodes =
+      (struct ymml_tensor **)((uintptr_t)darena->mem_buffer + object->offset);
+
   // Keep start-node as nullptr.
   ngraph->start_node = nullptr;
 
@@ -286,18 +292,21 @@ struct ymml_graph * ymml_new_graph(struct ymml_meta_data_arena *marena, struct y
   return ngraph;
 }
 
-static void ymml_visit_parent_nodes(struct ymml_graph *graph, struct ymml_tensor *tensor){
-  if(tensor == nullptr)return;
+static void ymml_visit_parent_nodes(struct ymml_graph *graph,
+                                    struct ymml_tensor *tensor) {
+  if (tensor == nullptr)
+    return;
 
-  for(uint8_t i = 0; i < YMML_MAX_SRC;i++){
+  for (uint8_t i = 0; i < YMML_MAX_SRC; i++) {
     ymml_visit_parent_nodes(graph, tensor->src[i]);
   }
   graph->sorted_nodes[graph->total_nodes] = tensor;
   graph->total_nodes++;
 }
 
-void ymml_build_forward_graph(struct ymml_graph *graph, struct ymml_tensor *tensor){
-  if(tensor == nullptr)return;
+void ymml_build_forward_graph(struct ymml_graph *graph,
+                              struct ymml_tensor *tensor) {
+  if (tensor == nullptr)
+    return;
   ymml_visit_parent_nodes(graph, tensor);
 }
-
